@@ -1,9 +1,15 @@
 # Viper — Technical Specification & Architecture
 
-Version 1.1 — Approved for module-by-module implementation. Decisions from
-review round 2 are incorporated below: universal engine (§1.1), Safe Mode
-(§5.5), module boundaries (§6), Lockdown Mode (§8), core-loop-first build
-order (§9).
+Version 1.3 — Approved for module-by-module implementation. Round 3 closed
+Session 0 UI isolation (§4.1) and ETW trace session naming (§2.2). Round 4
+corrects a real error introduced in the original draft: §2.2 step 4
+previously specified `CREATE_SUSPENDED`, which is only achievable when Viper
+itself calls `CreateProcess` — not applicable when intercepting a
+third-party launch (e.g. a user double-clicking Firefox). Replaced with
+`NtSuspendProcess`/`NtResumeProcess`, explicitly documented as an
+undocumented-API tradeoff with a best-effort (not guaranteed-zero) race
+window. §4.1 also corrected: Session 0 privileges must be explicitly enabled
+via `AdjustTokenPrivileges`, not assumed active by default.
 
 ---
 
@@ -104,13 +110,46 @@ is based entirely on monitoring real process creation at the OS level:
 3. The job is created with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` — meaning if our
    service dies uncleanly, Windows itself guarantees the suspended tree is torn
    down rather than left in a zombie "half-visible" state.
-4. The main thread is created with `CREATE_SUSPENDED`. No window is created, no
-   frame is rendered, no cached tab is drawn — the process exists but has not run
-   a single instruction of app logic.
+4. **Suspension mechanism — corrected from an earlier draft error.** The original
+   architecture stated the target is created with `CREATE_SUSPENDED`. That is only
+   possible when *we* are the one calling `CreateProcess` — for the actual use
+   case (a user double-clicking Firefox from the Start Menu, Explorer, or a
+   shortcut), Explorer calls `CreateProcess`, not Viper, and we only learn about
+   it via the ETW event *after* the process already exists. `CREATE_SUSPENDED`
+   is therefore not applicable to third-party-launched processes and is corrected
+   here rather than left as a spec/implementation contradiction:
+
+   - On the ETW `win:Start` event, the service immediately calls
+     `NtSuspendProcess` (`ntdll.dll`) on the new process, which suspends every
+     thread in the process at once. This is an **undocumented Windows API** —
+     it has no official Microsoft documentation or forward-compatibility
+     guarantee, unlike every other API this design relies on. It is nonetheless
+     the correct choice here: it is the same mechanism used by long-standing,
+     widely-trusted tools (Process Explorer, Process Hacker) for exactly this
+     purpose, and the alternative — a kernel-mode filter driver that could
+     guarantee pre-execution suspension — was already rejected in §2.1 for this
+     threat model. This tradeoff is deliberate and documented, not an oversight.
+   - Immediately after, the process is assigned to the Job Object (step 2 above)
+     with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`.
+   - **This is best-effort, not a hard guarantee.** Between the actual
+     `CreateProcess` call (by Explorer) and our `NtSuspendProcess` call landing,
+     there is a real, non-zero window — typically sub-millisecond given ETW's
+     delivery latency — during which the target process's main thread could
+     execute. In practice this window is far shorter than the time needed to
+     create a window and paint visible content (most GUI frameworks haven't
+     even entered their message loop yet at this point), so the practical risk
+     of a visible flash of cached content is very low but **not mathematically
+     zero**. This is consistent with the threat model in §1: deterring a casual
+     coworker, not providing a formal real-time guarantee against a
+     sub-millisecond timing attack.
 5. The lock-screen prompt (a separate, always-trusted process, see §4) is shown.
-6. **On correct password:** `ResumeThread` on the primary thread. The app resumes
-   completely normally from that point — no crash-recovery prompt, no corrupted
-   state, because it was never running.
+6. **On correct password:** `NtResumeProcess` — the symmetric counterpart to
+   `NtSuspendProcess`, resuming every thread that was suspended. (`ResumeThread`
+   alone would only resume one thread and is not the correct counterpart once
+   suspension happens via `NtSuspendProcess` rather than `CREATE_SUSPENDED`.)
+   The app resumes from wherever its threads actually were — for a process this
+   young, functionally identical to a normal fresh launch, since so little had
+   executed.
 7. **On failed / cancelled auth:** the entire Job Object is terminated
    (`TerminateJobObject`), cleanly killing every process in the tree at once —
    this avoids the "ungraceful termination → Restore Session prompt" failure mode
@@ -229,7 +268,53 @@ migration" pattern — without a breaking redesign of the storage format.
 
 ---
 
-## 4. Lock Screen (UI)
+### 4.1 Session 0 isolation — how the UI actually gets on screen
+
+`Viper.Service` runs as a Windows Service under `LocalSystem`, which since
+Windows Vista means it executes in **Session 0** — an isolated session with
+no desktop, no window station a user can see, and no ability to directly
+show a window on the interactive user's screen. This is a hard OS boundary,
+not a permissions setting, and it means "the service just pops up a WPF
+window" is not actually possible as stated anywhere else in this document —
+this section makes the real mechanism explicit.
+
+**Mechanism:** when the service needs to show the lock screen, it:
+
+1. Calls `WTSQueryUserToken` to obtain a primary token for the currently
+   active interactive session (identified via
+   `WTSGetActiveConsoleSessionId`).
+2. Duplicates that token (`DuplicateTokenEx`) to a primary token suitable
+   for process creation.
+3. Calls `CreateProcessAsUser` with that token to launch
+   `Viper.LockScreen.exe` **inside the interactive user's session**, not
+   Session 0 — this is what makes the window actually visible and
+   interactive to whoever is sitting at the keyboard.
+4. The service must hold `SE_ASSIGNPRIMARYTOKEN_NAME` and
+   `SE_INCREASE_QUOTA_NAME` privileges to do this. `LocalSystem`'s token
+   contains both by default — but Windows privileges are **present-but-disabled**
+   by default even when held; they must be explicitly turned on for the current
+   process via `AdjustTokenPrivileges` before the calls in steps 1-3 will
+   succeed. Do not assume they are already active — call
+   `AdjustTokenPrivileges` (enabling both) once during service startup, check
+   its return value, and fail loudly (log + refuse to start the interception
+   loop) rather than silently if it fails, since a silent failure here means
+   step 3 will throw an unclear access-denied error the first time a lock
+   screen actually needs to appear.
+
+**No interactive user / locked Windows session edge case:** if
+`WTSGetActiveConsoleSessionId` returns no active session (e.g. the Windows
+login screen itself is showing, nobody is logged in yet), there is nothing
+to protect yet either — a protected app cannot be launched by anyone until
+someone logs into Windows first. The service should handle this case by
+simply waiting for a session-connect notification
+(`WTSRegisterSessionNotification`) rather than treating it as an error.
+
+**Multi-user machines:** if Windows Fast User Switching is in play, the
+service tracks the *currently active* console session at the moment of
+each interception — the lock screen always appears in front of whoever is
+actually at the keyboard right now, not a stale session.
+
+### 4.2 UI behavior
 
 A minimal, separate, always-on-top process (`Viper.LockScreen.exe`) launched by the
 service in an isolated session — deliberately dumb and small, since it is

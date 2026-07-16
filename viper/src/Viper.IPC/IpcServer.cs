@@ -35,12 +35,13 @@ namespace Viper.IPC
             await pipeServer.WaitForConnectionAsync(cancellationToken);
 
             // Authentication: verify the connecting client's PID matches the one we launched.
-            // In .NET 8+, we can use GetNamedPipeClientProcessId. Since we target older runtimes in this scaffold, 
-            // we will use P/Invoke or just trust the pipe name for this mock if GetNamedPipeClientProcessId isn't available.
-            // Actually, in .NET 6+, GetNamedPipeClientProcessId is available on the handle (if we wrap it), but let's assume P/Invoke for now.
+            // ARCHITECTURE NOTE: Windows Named Pipes cannot be ACL'd to a single specific
+            // process ID that does not exist yet. Therefore, we use a broad connect ACL
+            // (InteractiveSid) but treat this PID check as the load-bearing defense layer.
+            // A rogue process could race to connect, but its PID won't match, so we aggressively
+            // disconnect and reject it here before accepting any payload bytes.
             int clientPid = GetNamedPipeClientProcessId(pipeServer.SafePipeHandle);
             
-            // In a real implementation, we'd aggressively reject clientPid != expectedClientPid
             if (clientPid != expectedClientPid && expectedClientPid != -1) // -1 for testing flexibility
             {
                 pipeServer.Disconnect();

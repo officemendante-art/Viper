@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Viper.ProcessEngine;
 using Viper.IPC;
+using Viper.Security;
 
 namespace Viper.Service
 {
@@ -13,12 +14,17 @@ namespace Viper.Service
     {
         private readonly ILogger<Worker> _logger;
         private readonly ProcessMonitor _processMonitor;
+        private readonly PasswordRecord _dummyPasswordRecord;
 
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
             _processMonitor = new ProcessMonitor();
             _processMonitor.ProcessStarted += OnProcessStarted;
+            
+            // For Milestone A testing, we hash a dummy password "password" on startup
+            // to fully exercise the Viper.Security Argon2id path during authentication.
+            _dummyPasswordRecord = PasswordHasher.HashPassword("password");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -82,17 +88,16 @@ namespace Viper.Service
                     var msg = await ipcServer.WaitForMessageAsync(uiProcess.Id, cts.Token);
                     if (msg.Action == "Auth")
                     {
-                        // TODO: Use Viper.Security to validate msg.Payload against config
-                        // For Milestone A testing, we accept "password"
-                        if (msg.Payload == "password")
+                        // Milestone A testing: Validate msg.Payload against our Argon2id hashed record
+                        if (PasswordHasher.VerifyPassword(msg.Payload, _dummyPasswordRecord))
                         {
-                            _logger.LogInformation("Auth Success. Resuming PID {Pid}", processId);
+                            _logger.LogInformation("Auth Success (Argon2id verified). Resuming PID {Pid}", processId);
                             ProcessManager.ResumeProcess(processId);
                             // Keep job object alive, just wait.
                         }
                         else
                         {
-                            _logger.LogWarning("Auth Failed. Terminating PID {Pid}", processId);
+                            _logger.LogWarning("Auth Failed (Argon2id reject). Terminating PID {Pid}", processId);
                             job.Terminate();
                         }
                     }
