@@ -24,7 +24,7 @@ namespace Viper.Service
             
             // For Milestone A testing, we hash a dummy password "password" on startup
             // to fully exercise the Viper.Security Argon2id path during authentication.
-            _dummyPasswordRecord = PasswordHasher.HashPassword("password");
+            _dummyPasswordRecord = PasswordHasher.Hash("password");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -89,7 +89,7 @@ namespace Viper.Service
                     if (msg.Action == "Auth")
                     {
                         // Milestone A testing: Validate msg.Payload against our Argon2id hashed record
-                        if (PasswordHasher.VerifyPassword(msg.Payload, _dummyPasswordRecord))
+                        if (PasswordHasher.Verify(msg.Payload, _dummyPasswordRecord))
                         {
                             _logger.LogInformation("Auth Success (Argon2id verified). Resuming PID {Pid}", processId);
                             ProcessManager.ResumeProcess(processId);
