@@ -3,14 +3,17 @@
 Universal Windows 11 application locker. See `docs/SPEC.md` for the full
 architecture, threat model, and rationale.
 
-## Status: Milestone A, step 1 in progress
+## Status: Milestone C Complete — Fully Implemented
 
-Per `SPEC.md` §9, build order is core-loop-first. Currently implemented:
+Per `SPEC.md` §9, build order was core-loop-first. Currently implemented and verified:
 
 - ✅ `src/Viper.Security` — Argon2id password hashing (the trust root)
-- ✅ `tests/Viper.Security.Tests` — unit tests for the above
-- ⬜ `src/Viper.ProcessEngine` — Job Object suspend/resume/terminate (next)
-- ⬜ everything else in §9
+- ✅ `src/Viper.ProcessEngine` — Job Object suspend/resume/terminate via ETW interception
+- ✅ `src/Viper.Service` — Windows Service orchestrator & Lockdown state machine
+- ✅ `src/Viper.Config` & `Viper.IPC` — Config store & authenticated Named Pipe IPC
+- ✅ `src/Viper.UI` — Lock screen & Owner settings UI (Master Password recovery)
+- ✅ `src/Viper.Watchdog` — Mutual-restart pairing
+- ✅ `installer/Viper.Installer.wixproj` — WiX v4/v5 MSI installer (SDDL & ACL hardening)
 
 ## Building and running tests
 

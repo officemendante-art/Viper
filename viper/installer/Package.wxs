@@ -1,0 +1,108 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="Viper Application Lock" Manufacturer="Dante" Version="1.0.0.0" UpgradeCode="d65f57a3-b457-418a-a92c-15d2a23eb1eb">
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+
+    <!-- Standard minimal UI -->
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" /> <!-- Need a dummy license if Minimal UI is used, or just omit if it allows. Actually WixUI_Minimal requires EULA. We will just use WixUI_InstallDir or create a dummy rtf. -->
+
+    <Property Id="ARPNOREPAIR" Value="yes" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Viper">
+        <Component Id="ViperServiceComp" Guid="210b377b-60a6-4448-b4b6-39df9f52f36f">
+          <File Id="ViperServiceExe" Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.Service.exe" KeyPath="yes" />
+          <File Id="ViperServiceDll" Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.Service.dll" />
+          <File Id="ViperServiceRuntimeConfig" Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.Service.runtimeconfig.json" />
+          
+          <ServiceInstall Id="ServiceInstaller"
+                          Type="ownProcess"
+                          Name="ViperService"
+                          DisplayName="Viper Application Lock Service"
+                          Description="Viper offline application locker - intercepts and locks protected applications."
+                          Start="auto"
+                          Account="LocalSystem"
+                          ErrorControl="normal" />
+          
+          <ServiceControl Id="ServiceControl" Start="install" Stop="both" Remove="uninstall" Name="ViperService" Wait="yes" />
+        </Component>
+
+        <Component Id="ViperWatchdogComp" Guid="98a9644d-045a-4e8c-8f19-33d3c7344937">
+          <File Id="ViperWatchdogExe" Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.exe" KeyPath="yes" />
+          <File Id="ViperWatchdogDll" Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.dll" />
+          <File Id="ViperWatchdogRuntimeConfig" Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.runtimeconfig.json" />
+          
+          <ServiceInstall Id="WatchdogInstaller"
+                          Type="ownProcess"
+                          Name="ViperWatchdog"
+                          DisplayName="Viper Watchdog Service"
+                          Description="Viper watchdog - monitors and restarts the Viper Application Lock Service."
+                          Start="auto"
+                          Account="LocalSystem"
+                          ErrorControl="normal" />
+          
+          <ServiceControl Id="WatchdogControl" Start="install" Stop="both" Remove="uninstall" Name="ViperWatchdog" Wait="yes" />
+        </Component>
+        
+        <Component Id="SharedLibraries" Guid="f0ab3eb4-7e87-4dcb-928d-192667858af1">
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.ProcessEngine.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.IPC.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.Security.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Viper.Config.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Microsoft.Extensions.Hosting.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Microsoft.Extensions.Hosting.Abstractions.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Microsoft.Extensions.Logging.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Microsoft.Extensions.Logging.Abstractions.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Konscious.Security.Cryptography.Argon2.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\Konscious.Security.Cryptography.Blake2.dll" />
+          <!-- ServiceController package libraries -->
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\System.ServiceProcess.ServiceController.dll" />
+          <File Source="..\src\Viper.Service\bin\Debug\net10.0\System.Diagnostics.EventLog.dll" />
+        </Component>
+
+        <Component Id="UIExe" Guid="927a4d5e-e478-433b-bf0b-fb3e9c490a6e">
+          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.exe" />
+          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.dll" />
+          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.runtimeconfig.json" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="ViperConfigDir" Name="Viper">
+        <Component Id="ViperConfigFolderComp" Guid="72f3e827-b08e-4a6c-9226-c2227d89487c">
+          <CreateFolder />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Viper Core" Level="1">
+      <ComponentRef Id="ViperServiceComp" />
+      <ComponentRef Id="ViperWatchdogComp" />
+      <ComponentRef Id="SharedLibraries" />
+      <ComponentRef Id="UIExe" />
+      <ComponentRef Id="ViperConfigFolderComp" />
+    </Feature>
+
+    <!-- Custom Actions to set SDDL and ACLs -->
+    <CustomAction Id="SetServiceAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperService D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
+    <CustomAction Id="SetWatchdogAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperWatchdog D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
+
+    <CustomAction Id="SetFolderAcls1" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /inheritance:r&quot;" />
+    <CustomAction Id="SetFolderAcls2" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;NT AUTHORITY\SYSTEM:(OI)(CI)F&quot;&quot;" />
+    <CustomAction Id="SetFolderAcls3" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;BUILTIN\Administrators:(OI)(CI)F&quot;&quot;" />
+    <CustomAction Id="SetFolderAcls4" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /deny &quot;BUILTIN\Users:(OI)(CI)(W,D)&quot;&quot;" />
+    <CustomAction Id="SetFolderAcls5" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;BUILTIN\Users:(OI)(CI)R&quot;&quot;" />
+
+    <InstallExecuteSequence>
+      <Custom Action="SetServiceAcl" After="InstallServices" Condition="NOT Installed" />
+      <Custom Action="SetWatchdogAcl" After="InstallServices" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcls1" After="CreateFolders" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcls2" After="SetFolderAcls1" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcls3" After="SetFolderAcls2" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcls4" After="SetFolderAcls3" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcls5" After="SetFolderAcls4" Condition="NOT Installed" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>
