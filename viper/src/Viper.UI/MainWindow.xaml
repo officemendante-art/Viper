@@ -8,8 +8,8 @@
         Loaded="Window_Loaded">
     <Grid>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <TextBlock Text="App Locked" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-            <TextBlock Text="Enter App Unlock Password:" Foreground="#AAAAAA" FontSize="14" Margin="0,0,0,5"/>
+            <TextBlock x:Name="TitleText" Text="App Locked" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+            <TextBlock x:Name="SubtitleText" Text="Enter App Unlock Password:" Foreground="#AAAAAA" FontSize="14" Margin="0,0,0,5"/>
             <PasswordBox x:Name="PasswordInput" Width="250" Height="30" FontSize="16" Margin="0,0,0,20" Background="#333333" Foreground="White" BorderBrush="#555555"/>
             <Button x:Name="UnlockBtn" Content="Unlock" Width="100" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="Bold" Click="UnlockBtn_Click"/>
         </StackPanel>

@@ -10,7 +10,17 @@ namespace Viper.UI
         public MainWindow()
         {
             InitializeComponent();
+            var args = Environment.GetCommandLineArgs();
+            _isLockedDown = Array.Exists(args, arg => arg.Equals("locked", StringComparison.OrdinalIgnoreCase));
+            
+            if (_isLockedDown)
+            {
+                TitleText.Text = "App Locked (Max Attempts Exceeded)";
+                SubtitleText.Text = "Enter Master Password:";
+            }
         }
+
+        private bool _isLockedDown;
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -27,7 +37,7 @@ namespace Viper.UI
                 var client = new IpcClient();
                 var msg = new IpcMessage 
                 { 
-                    Action = "Auth", 
+                    Action = _isLockedDown ? "AuthMaster" : "AuthApp", 
                     Payload = PasswordInput.Password 
                 };
 
