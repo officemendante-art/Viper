@@ -258,15 +258,19 @@ namespace Viper.Service
                         }
                         else
                         {
-                            config.MasterPasswordFailedAttempts++;
-                            var nextDelay = GetMasterPasswordDelay(config.MasterPasswordFailedAttempts);
-                            _masterPasswordNextAllowedAttempt = DateTime.UtcNow + nextDelay;
-                            _configStore.Save(config); // Single atomic save of counter
+                            if (!isRateLimited)
+                            {
+                                config.MasterPasswordFailedAttempts++;
+                                var nextDelay = GetMasterPasswordDelay(config.MasterPasswordFailedAttempts);
+                                _masterPasswordNextAllowedAttempt = DateTime.UtcNow + nextDelay;
+                                _configStore.Save(config); // Single atomic save of counter
 
-                            _logger.LogWarning(
-                                "Master Auth Failed for PID {Pid}. Global attempt {Count}. " +
-                                "Next attempt delayed by {Delay}s.",
-                                processId, config.MasterPasswordFailedAttempts, nextDelay.TotalSeconds);
+                                _logger.LogWarning(
+                                    "Master Auth Failed for PID {Pid}. Global attempt {Count}. " +
+                                    "Next attempt delayed by {Delay}s.",
+                                    processId, config.MasterPasswordFailedAttempts, nextDelay.TotalSeconds);
+                            }
+
                             job.Terminate();
                         }
                     }
