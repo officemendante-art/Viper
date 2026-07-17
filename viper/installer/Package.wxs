@@ -77,23 +77,17 @@
 
 
     <!-- Custom Actions to set SDDL and ACLs -->
-    <CustomAction Id="SetServiceAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperService D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
-    <CustomAction Id="SetWatchdogAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperWatchdog D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
+    <CustomAction Id="SetServiceAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperService D:(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
+    <CustomAction Id="SetWatchdogAcl" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="sc.exe sdset ViperWatchdog D:(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)" />
 
-    <CustomAction Id="SetFolderAcls1" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /inheritance:r&quot;" />
-    <CustomAction Id="SetFolderAcls2" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;NT AUTHORITY\SYSTEM:(OI)(CI)F&quot;&quot;" />
-    <CustomAction Id="SetFolderAcls3" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;BUILTIN\Administrators:(OI)(CI)F&quot;&quot;" />
-    <CustomAction Id="SetFolderAcls4" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /deny &quot;BUILTIN\Users:(OI)(CI)(W,D)&quot;&quot;" />
-    <CustomAction Id="SetFolderAcls5" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="cmd.exe /c &quot;icacls &quot;[CommonAppDataFolder]Viper&quot; /grant:r &quot;BUILTIN\Users:(OI)(CI)R&quot;&quot;" />
+    <CustomAction Id="SetFolderAcl1" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="icacls &quot;[CommonAppDataFolder]Viper&quot; /inheritance:r /grant:r &quot;SYSTEM:(OI)(CI)F&quot; &quot;Administrators:(OI)(CI)F&quot;" />
+    <CustomAction Id="SetFolderAcl2" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="icacls &quot;[CommonAppDataFolder]Viper&quot; /deny &quot;Users:(OI)(CI)W&quot;" />
 
     <InstallExecuteSequence>
-      <Custom Action="SetServiceAcl" After="InstallServices" Condition="NOT Installed" />
-      <Custom Action="SetWatchdogAcl" After="InstallServices" Condition="NOT Installed" />
-      <Custom Action="SetFolderAcls1" After="CreateFolders" Condition="NOT Installed" />
-      <Custom Action="SetFolderAcls2" After="SetFolderAcls1" Condition="NOT Installed" />
-      <Custom Action="SetFolderAcls3" After="SetFolderAcls2" Condition="NOT Installed" />
-      <Custom Action="SetFolderAcls4" After="SetFolderAcls3" Condition="NOT Installed" />
-      <Custom Action="SetFolderAcls5" After="SetFolderAcls4" Condition="NOT Installed" />
+      <Custom Action="SetServiceAcl" After="StartServices" Condition="NOT Installed" />
+      <Custom Action="SetWatchdogAcl" After="StartServices" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcl1" After="InstallFiles" Condition="NOT Installed" />
+      <Custom Action="SetFolderAcl2" After="SetFolderAcl1" Condition="NOT Installed" />
     </InstallExecuteSequence>
 
   </Package>
