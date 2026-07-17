@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Viper.ProcessEngine;
 using Viper.IPC;
 using Viper.Security;
+using Viper.Config;
+using System.Linq;
 
 namespace Viper.Service
 {
@@ -15,10 +17,12 @@ namespace Viper.Service
         private readonly ILogger<Worker> _logger;
         private readonly ProcessMonitor _processMonitor;
         private readonly PasswordRecord _dummyPasswordRecord;
+        private readonly ConfigStore _configStore;
 
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
+            _configStore = new ConfigStore();
             _processMonitor = new ProcessMonitor();
             _processMonitor.ProcessStarted += OnProcessStarted;
             
@@ -42,11 +46,12 @@ namespace Viper.Service
             _processMonitor.Stop();
         }
 
-        private void OnProcessStarted(object sender, ProcessStartEventArgs e)
+        private void OnProcessStarted(object? sender, ProcessStartEventArgs e)
         {
-            // For Milestone A testing, we hardcode Firefox interception.
-            // In Milestone B, this will lookup against Viper.Config.
-            if (e.ImageFileName.Contains("firefox.exe", StringComparison.OrdinalIgnoreCase))
+            var config = _configStore.Load();
+            var protectedApp = config.ProtectedApps.FirstOrDefault(app => e.ImageFileName.EndsWith(app.Path, StringComparison.OrdinalIgnoreCase));
+
+            if (protectedApp != null)
             {
                 _logger.LogInformation("Intercepted {ImageName} (PID: {Pid})", e.ImageFileName, e.ProcessId);
                 

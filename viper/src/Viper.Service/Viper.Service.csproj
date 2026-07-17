@@ -15,5 +15,6 @@
     <ProjectReference Include="..\Viper.ProcessEngine\Viper.ProcessEngine.csproj" />
     <ProjectReference Include="..\Viper.Security\Viper.Security.csproj" />
     <ProjectReference Include="..\Viper.IPC\Viper.IPC.csproj" />
+    <ProjectReference Include="..\Viper.Config\Viper.Config.csproj" />
   </ItemGroup>
 </Project>
