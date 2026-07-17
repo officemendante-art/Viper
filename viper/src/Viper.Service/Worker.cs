@@ -1,5 +1,8 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -63,6 +66,11 @@ namespace Viper.Service
             
             _logger.LogInformation("Viper Service starting ETW interception.");
             _processMonitor.Start();
+
+            // Start watchdog-monitoring task (mutual restart pairing with Viper.Watchdog)
+            var watchdogTask = MonitorWatchdogAsync(stoppingToken);
+            // Start auto-update hash detection task
+            var hashCheckTask = CheckExecutableHashesAsync(stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -128,10 +136,46 @@ namespace Viper.Service
             {
                 _logger.LogInformation("Launching Lock Screen UI for PID {Pid} ({AppName})...", processId, protectedApp.DisplayName);
                 
-                // 1. Launch UI (mocked direct launch for now, skipping Session 0 complexity for local dev run)
-                var uiPath = System.IO.Path.GetFullPath(@"..\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.exe");
+                // Real Session 0 → interactive session UI launch via
+                // WTSQueryUserToken → DuplicateTokenEx → CreateProcessAsUser.
+                // The AdjustTokenPrivileges call in EnablePrivileges() on startup
+                // enables SeAssignPrimaryTokenPrivilege and SeIncreaseQuotaPrivilege
+                // which are required for this path to succeed.
+                // Falls back to direct Process.Start when running interactively (local dev).
+                var uiPath = Path.GetFullPath(@"..\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.exe");
                 var args = protectedApp.IsLockedDown ? "locked" : "";
-                var uiProcess = System.Diagnostics.Process.Start(uiPath, args);
+                
+                Process? uiProcess = null;
+                try
+                {
+                    uiProcess = SessionLauncher.LaunchInUserSession(uiPath, args);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Session 0 launch failed (expected if running interactively). Falling back to direct launch.");
+                }
+                
+                if (uiProcess == null)
+                {
+                    // Fallback for local dev or no active console session
+                    try
+                    {
+                        uiProcess = Process.Start(uiPath, args);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to launch UI for PID {Pid}. Terminating.", processId);
+                        job.Terminate();
+                        return;
+                    }
+                }
+                
+                if (uiProcess == null)
+                {
+                    _logger.LogError("No active console session and no fallback available. Terminating PID {Pid}.", processId);
+                    job.Terminate();
+                    return;
+                }
                 
                 // 2. Wait for IPC response
                 var ipcServer = new IpcServer();
@@ -233,6 +277,110 @@ namespace Viper.Service
                     job.Terminate();
                 }
             });
+        }
+        /// <summary>
+        /// Mutual-restart pairing: Viper.Service monitors Viper.Watchdog via SCM.
+        /// Per AGENTS.md §3, this is NOT a project reference — supervised via
+        /// Service Control Manager calls only.
+        /// </summary>
+        private async Task MonitorWatchdogAsync(CancellationToken ct)
+        {
+            const string watchdogServiceName = "ViperWatchdog";
+            const int pollIntervalMs = 5000;
+
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    using var sc = new System.ServiceProcess.ServiceController(watchdogServiceName);
+                    sc.Refresh();
+
+                    if (sc.Status == System.ServiceProcess.ServiceControllerStatus.Stopped)
+                    {
+                        _logger.LogWarning("ViperWatchdog is stopped. Attempting restart via SCM...");
+                        sc.Start();
+                        sc.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                        _logger.LogInformation("ViperWatchdog restarted successfully.");
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Watchdog service not installed — expected during local dev
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error monitoring ViperWatchdog.");
+                }
+
+                await Task.Delay(pollIntervalMs, ct);
+            }
+        }
+
+        /// <summary>
+        /// Auto-update hash re-registration per SPEC.md §5.4.
+        /// Periodically checks registered apps' ExecutableHash against the actual
+        /// file on disk. If a version bump is detected (e.g. browser auto-update),
+        /// silently re-hashes and updates the config rather than requiring manual
+        /// re-linking.
+        /// </summary>
+        private async Task CheckExecutableHashesAsync(CancellationToken ct)
+        {
+            const int checkIntervalMs = 60_000; // Check every minute
+
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    var config = _configStore.Load();
+                    bool changed = false;
+
+                    foreach (var app in config.ProtectedApps)
+                    {
+                        if (string.IsNullOrEmpty(app.Path) || !File.Exists(app.Path))
+                            continue;
+
+                        string currentHash = ComputeFileHash(app.Path);
+                        if (!string.IsNullOrEmpty(app.ExecutableHash) && app.ExecutableHash != currentHash)
+                        {
+                            var fvi = FileVersionInfo.GetVersionInfo(app.Path);
+                            _logger.LogInformation(
+                                "Auto-update detected for {AppName}: hash changed. " +
+                                "Old: {OldHash}, New: {NewHash}, Version: {Version}",
+                                app.DisplayName,
+                                app.ExecutableHash.Substring(0, Math.Min(12, app.ExecutableHash.Length)) + "...",
+                                currentHash.Substring(0, Math.Min(12, currentHash.Length)) + "...",
+                                fvi.FileVersion ?? "unknown");
+                            app.ExecutableHash = currentHash;
+                            changed = true;
+                        }
+                        else if (string.IsNullOrEmpty(app.ExecutableHash))
+                        {
+                            // First-time hash registration
+                            app.ExecutableHash = currentHash;
+                            changed = true;
+                        }
+                    }
+
+                    if (changed)
+                    {
+                        _configStore.Save(config);
+                        _logger.LogInformation("Config saved with updated executable hashes.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error during executable hash check.");
+                }
+
+                await Task.Delay(checkIntervalMs, ct);
+            }
+        }
+
+        private static string ComputeFileHash(string filePath)
+        {
+            using var stream = File.OpenRead(filePath);
+            byte[] hash = SHA256.HashData(stream);
+            return Convert.ToHexString(hash);
         }
 
         private void EnablePrivileges()
