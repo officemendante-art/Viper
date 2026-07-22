@@ -28,6 +28,7 @@ namespace Viper.Watchdog
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await Task.Yield();
             _logger.LogInformation("Viper Watchdog starting. Monitoring service: {ServiceName}", TargetServiceName);
 
             while (!stoppingToken.IsCancellationRequested)
@@ -41,7 +42,7 @@ namespace Viper.Watchdog
                     {
                         _logger.LogWarning("ViperService is stopped. Attempting restart via SCM...");
                         sc.Start();
-                        sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                        await Task.Run(() => sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30)));
                         _logger.LogInformation("ViperService restarted successfully.");
                     }
                     else if (sc.Status != ServiceControllerStatus.Running &&

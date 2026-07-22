@@ -49,6 +49,7 @@ namespace Viper.Service
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await Task.Yield();
             EnablePrivileges();
             
             // On startup, derive the Master Password delay from the persisted counter
@@ -304,7 +305,7 @@ namespace Viper.Service
                     {
                         _logger.LogWarning("ViperWatchdog is stopped. Attempting restart via SCM...");
                         sc.Start();
-                        sc.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                        await Task.Run(() => sc.WaitForStatus(System.ServiceProcess.ServiceControllerStatus.Running, TimeSpan.FromSeconds(30)));
                         _logger.LogInformation("ViperWatchdog restarted successfully.");
                     }
                 }
