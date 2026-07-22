@@ -31,7 +31,15 @@ same solution/workflow as the rest of the project for consistency.
 dotnet restore
 dotnet build
 dotnet test
+
+# Build WiX Installer (.msi):
+dotnet build installer\Viper.Installer.wixproj
+
+# Run Installer with full verbose logging:
+msiexec /i installer\bin\Debug\Viper.Installer.msi /l*v install.log
 ```
+
+See [`installer/TROUBLESHOOTING.md`](file:///c:/Users/DANTE/Downloads/Viper/viper/installer/TROUBLESHOOTING.md) for detailed diagnostic guides if an installation error occurs.
 
 Expected: all tests in `Viper.Security.Tests` pass. If `dotnet test`
 reports any failure, **stop and report it back rather than editing the
