@@ -4,7 +4,7 @@
 
     <!-- Standard minimal UI -->
     <ui:WixUI Id="WixUI_Minimal" />
-    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" /> <!-- Need a dummy license if Minimal UI is used, or just omit if it allows. Actually WixUI_Minimal requires EULA. We will just use WixUI_InstallDir or create a dummy rtf. -->
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
 
     <Property Id="ARPNOREPAIR" Value="yes" />
 
@@ -56,12 +56,18 @@
       <ComponentRef Id="ViperWatchdogComp" />
       <ComponentRef Id="ViperConfigFolderComp" />
       <ComponentGroupRef Id="SharedDependencies" />
+      <ComponentGroupRef Id="WatchdogDependencies" />
       <ComponentGroupRef Id="UIDependencies" />
     </Feature>
 
     <ComponentGroup Id="SharedDependencies" Directory="INSTALLFOLDER">
       <Files Include="..\src\Viper.Service\bin\Debug\net10.0\**\*.dll" />
       <Files Include="..\src\Viper.Service\bin\Debug\net10.0\**\*.json" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="WatchdogDependencies" Directory="INSTALLFOLDER">
+      <Files Include="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.dll" />
+      <Files Include="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.*.json" />
     </ComponentGroup>
 
     <ComponentGroup Id="UIDependencies" Directory="INSTALLFOLDER">
@@ -77,8 +83,8 @@
     <CustomAction Id="SetFolderAcl2" Execute="deferred" Impersonate="no" Return="ignore" Directory="TARGETDIR" ExeCommand="icacls &quot;[CommonAppDataFolder]Viper&quot; /deny &quot;Users:(OI)(CI)W&quot;" />
 
     <InstallExecuteSequence>
-      <Custom Action="SetServiceAcl" After="StartServices" Condition="NOT Installed" />
-      <Custom Action="SetWatchdogAcl" After="StartServices" Condition="NOT Installed" />
+      <Custom Action="SetServiceAcl" Before="StartServices" Condition="NOT Installed" />
+      <Custom Action="SetWatchdogAcl" Before="StartServices" Condition="NOT Installed" />
       <Custom Action="SetFolderAcl1" After="InstallFiles" Condition="NOT Installed" />
       <Custom Action="SetFolderAcl2" After="SetFolderAcl1" Condition="NOT Installed" />
     </InstallExecuteSequence>
