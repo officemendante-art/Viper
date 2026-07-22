@@ -28,9 +28,6 @@
 
         <Component Id="ViperWatchdogComp" Guid="98a9644d-045a-4e8c-8f19-33d3c7344937">
           <File Id="ViperWatchdogExe" Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.exe" KeyPath="yes" />
-          <File Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.dll" />
-          <File Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.runtimeconfig.json" />
-          <File Source="..\src\Viper.Watchdog\bin\Debug\net10.0\Viper.Watchdog.deps.json" />
           
           <ServiceInstall Id="WatchdogInstaller"
                           Type="ownProcess"
@@ -42,13 +39,6 @@
                           ErrorControl="normal" />
           
           <ServiceControl Id="WatchdogControl" Start="install" Stop="both" Remove="uninstall" Name="ViperWatchdog" Wait="yes" />
-        </Component>
-
-        <Component Id="UIExe" Guid="927a4d5e-e478-433b-bf0b-fb3e9c490a6e">
-          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.exe" />
-          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.dll" />
-          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.runtimeconfig.json" />
-          <File Source="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.deps.json" />
         </Component>
       </Directory>
     </StandardDirectory>
@@ -64,15 +54,18 @@
     <Feature Id="MainFeature" Title="Viper Core" Level="1">
       <ComponentRef Id="ViperServiceComp" />
       <ComponentRef Id="ViperWatchdogComp" />
-      <ComponentGroupRef Id="SharedDependencies" />
-      <ComponentRef Id="UIExe" />
       <ComponentRef Id="ViperConfigFolderComp" />
+      <ComponentGroupRef Id="SharedDependencies" />
+      <ComponentGroupRef Id="UIDependencies" />
     </Feature>
 
-    <!-- Auto-harvest all DLLs and JSONs from Viper.Service bin output to satisfy runtime dependencies -->
     <ComponentGroup Id="SharedDependencies" Directory="INSTALLFOLDER">
       <Files Include="..\src\Viper.Service\bin\Debug\net10.0\**\*.dll" />
       <Files Include="..\src\Viper.Service\bin\Debug\net10.0\**\*.json" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="UIDependencies" Directory="INSTALLFOLDER">
+      <Files Include="..\src\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.*" />
     </ComponentGroup>
 
 

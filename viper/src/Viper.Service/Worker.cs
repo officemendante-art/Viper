@@ -142,7 +142,8 @@ namespace Viper.Service
                 // enables SeAssignPrimaryTokenPrivilege and SeIncreaseQuotaPrivilege
                 // which are required for this path to succeed.
                 // Falls back to direct Process.Start when running interactively (local dev).
-                var uiPath = Path.GetFullPath(@"..\Viper.UI\bin\Debug\net10.0-windows\Viper.UI.exe");
+                var serviceDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
+                var uiPath = Path.Combine(serviceDir, "Viper.UI.exe");
                 var args = protectedApp.IsLockedDown ? "locked" : "";
                 
                 Process? uiProcess = null;
