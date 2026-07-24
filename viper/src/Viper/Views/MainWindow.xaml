@@ -1,0 +1,103 @@
+<Window x:Class="Viper.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Viper Settings" Height="520" Width="560"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize"
+        Loaded="Window_Loaded" Closing="Window_Closing">
+    <Border Background="#0A0A0A" BorderBrush="#1A1A1A" BorderThickness="1" CornerRadius="2">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="80" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="60" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="⚙ Viper" Foreground="White" FontFamily="Inter" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="15,0,0,0" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
+                        <Button Click="MinimizeBtn_Click" Content="—" Width="30" Height="30" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Inter" FontSize="12" />
+                        <Button Click="CloseHeaderBtn_Click" Content="✕" Width="30" Height="30" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Inter" FontSize="12" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Title -->
+            <StackPanel Grid.Row="1" Margin="20,15,20,0">
+                <TextBlock Text="Protected Applications" Foreground="White" FontFamily="Inter" FontWeight="Bold" FontSize="18" />
+                <TextBlock Text="Applications that require a password to open." Foreground="#666666" FontFamily="Inter" FontSize="12" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- App List -->
+            <Border Grid.Row="2" Background="#111111" BorderBrush="#1A1A1A" BorderThickness="1" CornerRadius="2" Margin="20,0,20,0">
+                <ListBox x:Name="AppListBox" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="Margin" Value="2"/>
+                            <Setter Property="Padding" Value="10,5"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#1A1A1A" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#1A1A1A" />
+                                                <Setter Property="BorderBrush" Value="#333333" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="{Binding DisplayName}" FontFamily="Inter" FontWeight="SemiBold" FontSize="13" Foreground="White" />
+                                <TextBlock Text="{Binding ExecutableName}" FontFamily="JetBrains Mono" FontSize="11" Foreground="#555555" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- Bottom Controls -->
+            <Grid Grid.Row="3" Margin="20,0,20,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <Button Content="+ Add App" Click="AddBtn_Click" Width="100" Height="32" Background="White" Foreground="Black" BorderThickness="0" FontFamily="Inter" FontWeight="SemiBold" FontSize="12" Margin="0,0,10,0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="2"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button Content="Remove" Click="RemoveBtn_Click" Width="80" Height="32" Background="Transparent" Foreground="#FF4444" BorderBrush="#331111" BorderThickness="1" FontFamily="Inter" FontSize="12">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="2"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+                <Button Content="Close" Click="CloseBtn_Click" Width="80" Height="32" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" Foreground="#AAAAAA" BorderBrush="#333333" BorderThickness="1" FontFamily="Inter" FontSize="12">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="2"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

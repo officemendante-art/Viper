@@ -1,0 +1,77 @@
+<Window x:Class="Viper.Views.UnlockDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Viper Unlock" Height="340" Width="480"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize"
+        FontFamily="Inter">
+    
+    <Window.Resources>
+        <Storyboard x:Key="ShakeAnimation">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" Storyboard.TargetName="MainBorder">
+                <EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.05" Value="-5"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="5"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="-5"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="5"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.25" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+    </Window.Resources>
+
+    <Border x:Name="MainBorder" Background="#0C0C0C" CornerRadius="2" BorderBrush="#222222" BorderThickness="1">
+        <Border.RenderTransform>
+            <TranslateTransform />
+        </Border.RenderTransform>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="60"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <TextBlock Text="🔒 VIPER APPLICATION LOCK" FontFamily="JetBrains Mono" FontSize="11" Foreground="#888888" VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Click="Minimize_Click" Content="—" Background="Transparent" BorderThickness="0" Foreground="#888888" Width="40" FontFamily="Segoe UI" Cursor="Hand"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Content -->
+            <StackPanel Grid.Row="1" Margin="32,20,32,0">
+                <TextBlock x:Name="TitleText" Text="App is locked" FontSize="24" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4"/>
+                <TextBlock Text="Enter your password to continue." FontSize="13.5" Foreground="#888888" TextWrapping="Wrap" Margin="0,0,0,24"/>
+
+                <Grid Margin="0,0,0,6">
+                    <TextBlock Text="PASSWORD" FontFamily="JetBrains Mono" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                </Grid>
+                <Border Background="#050505" BorderBrush="#262626" BorderThickness="1" CornerRadius="2" Height="40" Margin="0,0,0,16">
+                    <Grid>
+                        <PasswordBox x:Name="PwdBox" PasswordChanged="PwdBox_PasswordChanged" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" VerticalContentAlignment="Center" Padding="8,0,32,0" FontFamily="JetBrains Mono" FontSize="15"/>
+                        <TextBox x:Name="TxtBox" TextChanged="TxtBox_TextChanged" Visibility="Collapsed" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" VerticalContentAlignment="Center" Padding="8,0,32,0" FontFamily="JetBrains Mono" FontSize="15"/>
+                        <Button x:Name="EyeBtn" Click="EyeBtn_Click" Content="👁" HorizontalAlignment="Right" Width="32" Background="Transparent" BorderThickness="0" Foreground="#888888" Cursor="Hand"/>
+                    </Grid>
+                </Border>
+
+                <TextBlock x:Name="ErrorText" Foreground="#E57373" FontSize="13" Margin="0,8,0,0" Visibility="Collapsed" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Bottom -->
+            <Border Grid.Row="2" Background="#0C0C0C" BorderBrush="#222222" BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,32,0">
+                    <Button x:Name="CancelBtn" Click="CancelBtn_Click" Content="Cancel" Background="Transparent" Foreground="#888888" BorderThickness="0" FontFamily="Inter" FontSize="14" FontWeight="SemiBold" Width="80" Height="32" Margin="0,0,12,0" Cursor="Hand"/>
+                    <Button x:Name="UnlockBtn" Click="UnlockBtn_Click" Content="Unlock" Background="#FFFFFF" Foreground="#0A0A0A" FontFamily="Inter" FontSize="14" FontWeight="SemiBold" Width="100" Height="32" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="2">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
