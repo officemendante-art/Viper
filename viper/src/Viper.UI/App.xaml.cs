@@ -11,33 +11,60 @@ namespace Viper.UI
 
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
-                System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viper_ui_error.txt"), args.ExceptionObject.ToString());
+                try { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viper_ui_error.txt"), args.ExceptionObject.ToString()); } catch { }
             };
 
             DispatcherUnhandledException += (s, args) =>
             {
-                System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viper_ui_error.txt"), args.Exception.ToString());
+                try { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viper_ui_error.txt"), args.Exception.ToString()); } catch { }
             };
 
             var args = Environment.GetCommandLineArgs();
             
-            if (Array.Exists(args, a => a.Equals("setup", StringComparison.OrdinalIgnoreCase)))
+            bool explicitSetup = Array.Exists(args, a => a.Equals("setup", StringComparison.OrdinalIgnoreCase));
+            bool explicitSettings = Array.Exists(args, a => a.Equals("settings", StringComparison.OrdinalIgnoreCase));
+
+            if (explicitSetup)
             {
-                // First-run setup: create Master Password + App Unlock Password
+                // Explicit setup requested
                 var setupWindow = new SetupWindow();
                 MainWindow = setupWindow;
                 setupWindow.Show();
             }
-            else if (Array.Exists(args, a => a.Equals("settings", StringComparison.OrdinalIgnoreCase)))
+            else if (explicitSettings)
             {
-                // Settings screen: manage protected apps (requires Master Password auth first)
+                // Explicit settings requested
                 var settingsWindow = new SettingsWindow();
                 MainWindow = settingsWindow;
                 settingsWindow.Show();
             }
+            else if (args.Length <= 1)
+            {
+                // Double-clicked from Explorer directly (no command line args)
+                // Check if setup is already complete (viper.json exists in CommonAppData)
+                string configPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), 
+                    "Viper", 
+                    "viper.json");
+
+                if (!System.IO.File.Exists(configPath))
+                {
+                    // First-run setup: Master Password not configured yet
+                    var setupWindow = new SetupWindow();
+                    MainWindow = setupWindow;
+                    setupWindow.Show();
+                }
+                else
+                {
+                    // Setup complete: Open Settings Window for owner management
+                    var settingsWindow = new SettingsWindow();
+                    MainWindow = settingsWindow;
+                    settingsWindow.Show();
+                }
+            }
             else
             {
-                // Default: Lock screen (with optional "locked" arg for Lockdown Mode)
+                // Launched by Viper.Service to lock an intercepted process
                 var mainWindow = new MainWindow();
                 MainWindow = mainWindow;
                 mainWindow.Show();

@@ -145,7 +145,8 @@ namespace Viper.Service
                 // Falls back to direct Process.Start when running interactively (local dev).
                 var serviceDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
                 var uiPath = Path.Combine(serviceDir, "Viper.UI.exe");
-                var args = protectedApp.IsLockedDown ? "locked" : "";
+                var appArg = $"\"{protectedApp.DisplayName}\"";
+                var args = protectedApp.IsLockedDown ? $"{appArg} locked" : appArg;
                 
                 Process? uiProcess = null;
                 try

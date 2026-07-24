@@ -146,7 +146,7 @@
                 </Border>
 
                 <!-- Title & Subtitle -->
-                <TextBlock x:Name="TitleText" Text="Firefox is locked" 
+                <TextBlock x:Name="TitleText" Text="Application is locked" 
                            Foreground="#FFFFFF" FontSize="24" FontWeight="Bold" 
                            FontFamily="Inter, Segoe UI" Margin="0,0,0,6"/>
 

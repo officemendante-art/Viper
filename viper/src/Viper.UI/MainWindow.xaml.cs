@@ -23,10 +23,12 @@ namespace Viper.UI
             _isLockedDown = Array.Exists(args, arg => arg.Equals("locked", StringComparison.OrdinalIgnoreCase));
 
             // Extract app name from command line args if provided
-            string appName = "Firefox";
+            string appName = "Application";
             for (int i = 1; i < args.Length; i++)
             {
                 if (!args[i].Equals("locked", StringComparison.OrdinalIgnoreCase) && 
+                    !args[i].Equals("setup", StringComparison.OrdinalIgnoreCase) && 
+                    !args[i].Equals("settings", StringComparison.OrdinalIgnoreCase) && 
                     !args[i].StartsWith("-"))
                 {
                     appName = args[i];
